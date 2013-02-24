@@ -265,7 +265,7 @@ class ClientHello(HandshakeMsg):
 				use_renego_extension = IndividualExtensionsTested.RENEGO in self.use_extensions
 				use_session_ticket = IndividualExtensionsTested.SESSIONTICKET in self.use_extensions
 				use_sig_alg = use_sig_alg and (IndividualExtensionsTested.SIGNATURE_ALGS in self.use_extensions)
-			if use_servername and (not 	any(x not in "0123456789." for x in self.servername) or self.servername[0] == "["):
+			if use_servername and (not self.servername or not any(x not in "0123456789." for x in self.servername) or self.servername[0] == "["):
 				use_servername = False
 				
 			if self.servername and use_servername:
