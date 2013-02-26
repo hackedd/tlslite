@@ -313,7 +313,7 @@ class ClientHello(HandshakeMsg):
 				w.add(len(self.certificate_types)+1, 2)
 				w.addVarSeq(self.certificate_types, 1, 1)
 			if self.srp_username:
-				w.add(6, 2)
+				w.add(12, 2)
 				w.add(len(self.srp_username)+1, 2)
 				w.addVarSeq(stringToBytes(self.srp_username), 1, 1)
 			if self.use_renego and use_renego_extension:
