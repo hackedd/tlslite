@@ -210,11 +210,11 @@ class ClientHello(HandshakeMsg):
 				while soFar != totalExtLength:
 					extType = p.get(2)
 					extLength = p.get(2)
-					if extType == 6:
+					if extType == ExtensionType.SRP:
 						self.srp_username = bytesToString(p.getVarBytes(1))
-					elif extType == 7:
+					elif extType == ExtensionType.CLIENT_AUTHZ:
 						self.certificate_types = p.getVarList(1, 1)
-					elif extType == 5:
+					elif extType == ExtensionType.STATUS_REQUEST:
 						status_type = p.get(1)
 						if  status_type == CertificateStatusType.OCSP:
 							self.send_certstatus = True
@@ -226,7 +226,7 @@ class ClientHello(HandshakeMsg):
 								self.responders.append(bytes)
 								index += len(bytes)+2
 							self.ocsp_extensions = p.getVarBytes(2)
-					elif extType == 0xff01 :
+					elif extType == ExtensionType.RENEGOTIATION_INFO:
 						ri_len = p.get(1)
 						if extLength != ri_len +1:
 							self.renego_error = True
@@ -301,7 +301,7 @@ class ClientHello(HandshakeMsg):
 				w.add(extLength, 2)
 	
 			if self.servername and use_servername:
-				w.add(0,2) #ext type
+				w.add(ExtensionType.SERVER_NAME, 2)
 				w.add(5+len(self.servername),2) #payload len
 				w.add(3+len(self.servername),2) #payload len
 				w.add(0,1) #hostname type
@@ -309,34 +309,34 @@ class ClientHello(HandshakeMsg):
 
 			if self.certificate_types and self.certificate_types != \
 					[CertificateType.x509]:
-				w.add(7, 2)
+				w.add(ExtensionType.CLIENT_AUTHZ, 2)
 				w.add(len(self.certificate_types)+1, 2)
 				w.addVarSeq(self.certificate_types, 1, 1)
 			if self.srp_username:
-				w.add(12, 2)
+				w.add(ExtensionType.SRP, 2)
 				w.add(len(self.srp_username)+1, 2)
 				w.addVarSeq(stringToBytes(self.srp_username), 1, 1)
 			if self.use_renego and use_renego_extension:
-				w.add(0xff01, 2)
+				w.add(ExtensionType.RENEGOTIATION_INFO, 2)
 				w.add(1+(len(self.renego_bytes) if self.renego_bytes else 0), 2)
 				if self.renego_bytes:
 					w.addVarSeq(stringToBytes(self.renego_bytes),1,1)
 				else:
 					w.add(0, 1)
 			if self.send_certstatus and use_cert_status:
-				w.add(5, 2)
+				w.add(ExtensionType.STATUS_REQUEST, 2)
 				w.add(1+2+2, 2)
 				w.add(CertificateStatusType.OCSP, 1)
 				w.add(0, 2) # responders
 				w.add(0, 2) # extensions
 			if use_session_ticket:
-				w.add(35, 2)
+				w.add(ExtensionType.SESSIONTICKET, 2)
 				if self.session_ticket:
 					w.addVarSeq(stringToBytes(self.session_ticket), 1,2)
 				else:
 					w.add(0,2)
 			if use_sig_alg:
-				w.add(13, 2)
+				w.add(ExtensionType.SIGNATURE_ALGS, 2)
 				w.add(10, 2)
 				w.add(8, 2)
 				w.add(4, 1)
