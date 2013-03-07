@@ -404,11 +404,11 @@ class ServerHello(HandshakeMsg):
 			while soFar != totalExtLength:
 				extType = p.get(2)
 				extLength = p.get(2)
-				if extType == 0:
+				if extType == ExtensionType.SERVER_NAME:
 					self.signal_SNI = True
-				elif extType == 7:
+				elif extType == ExtensionType.CLIENT_AUTHZ:
 					self.certificate_type = p.get(1)
-				elif extType == 0xff01 :
+				elif extType == ExtensionType.RENEGOTIATION_INFO :
 					ri_len = p.get(1)
 					if extLength != ri_len +1:
 						self.renego_error = True
@@ -419,9 +419,9 @@ class ServerHello(HandshakeMsg):
 						else:
 							self.renego_bytes = None 
 						
-				elif extType == 5:
+				elif extType == ExtensionType.STATUS_REQUEST:
 					self.cert_status_ext_received =True
-				elif extType == 35:
+				elif extType == ExtensionType.SESSIONTICKET:
 					self.session_ticket_ext_received = True
 				else:
 					p.getFixBytes(extLength)
@@ -455,12 +455,12 @@ class ServerHello(HandshakeMsg):
 
 		if self.certificate_type and self.certificate_type != \
 				CertificateType.x509:
-			w.add(7, 2)
+			w.add(ExtensionType.CLIENT_AUTHZ, 2)
 			w.add(1, 2)
 			w.add(self.certificate_type, 1)
 
 		if self.use_renego:
-			w.add(0xff01, 2)
+			w.add(ExtensionType.RENEGOTIATION_INFO, 2)
 			w.add(1+(len(self.renego_bytes) if self.renego_bytes else 0), 2)
 			if self.renego_bytes:
 				w.addVarSeq(stringToBytes(self.renego_bytes),1,1)
