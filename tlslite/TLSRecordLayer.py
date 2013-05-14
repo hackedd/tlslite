@@ -111,20 +111,20 @@ class TLSRecordLayer:
 
 		#Am I a client or server?
 		self._client = None
-		
+
 		#Is a handshake in progress?
 		self._handshake_in_progress = False
-		
+
 		#Is renegotiation of the connection allowed
 		self.renegotiationAllowed = True
 		self.renegotiationStarted = False
-		self.peer_verify_data = None 
+		self.peer_verify_data = None
 		self.our_verify_data = None
-		
+
 		#Application data allowed to flow?
 		self._application_enabled = False
 		self.do_false_start = False
-		
+
 		# Application data queue when application data is not eneabled
 		self._application_queue = None
 
@@ -169,11 +169,11 @@ class TLSRecordLayer:
 
 		#Fault we will induce, for testing purposes
 		self.fault = None
-		
+
 		self.received_SNI_alert = False
-		
+
 		self.extra_padding_bytes = 0
-		
+
 		self.use_partial_app_record = False
 		self.part_app_record_len = 0
 		self.part_app_record_collect = False
@@ -227,7 +227,7 @@ class TLSRecordLayer:
 		try:
 			while len(self._readBuffer)<min and not self.closed:
 				try:
-					for result in self._getMsg( 
+					for result in self._getMsg(
 											((ContentType.application_data,ContentType.handshake,) if self.renegotiationAllowed else (ContentType.application_data,)),
 											((HandshakeType.hello_request if self._client else HandshakeType.client_hello) if self.renegotiationAllowed else None)
 											):
@@ -253,6 +253,8 @@ class TLSRecordLayer:
 			returnStr = self._readBuffer[:max]
 			self._readBuffer = self._readBuffer[max:]
 			yield returnStr
+		except socket.timeout:
+			raise  # Don't shutdown, let caller handle exception
 		except:
 			self._shutdown(False)
 			raise
@@ -301,9 +303,9 @@ class TLSRecordLayer:
 			index = 0
 			blockSize = 16384
 			first_block = 0
-			
+
 			skipEmptyFrag = not (self.use_partial_app_record and self.part_app_record_len == 0)
-			
+
 			if self.use_partial_app_record and self.part_app_record_len != 0 :
 				skipEmptyFrag = True
 				if self._writeState.encContext:
@@ -311,14 +313,14 @@ class TLSRecordLayer:
 						first_block =  self.part_app_record_len
 						if first_block < 0:
 							first_block = self._writeState.encContext.block_size - first_block
-						
+
 						if first_block > len(s) and len(s) > 0:
 							first_block = len(s)-1
 							if first_block == 0:
 								skipEmptyFrag =False
-			
+
 			collect_records = self.part_app_record_collect
-			
+
 			while 1:
 				startIndex = index
 				endIndex = startIndex + (blockSize if not first_block else first_block)
@@ -526,7 +528,7 @@ class TLSRecordLayer:
 	def _sendMsg(self, msg, skipEmptyFrag=True, collect_records = False):
 		bytes = msg.write()
 		contentType = msg.contentType
-		
+
 		#Whenever we're connected and asked to send a message,
 		#we first send an empty Application Data message.  This prevents
 		#an attacker from launching a chosen-plaintext attack based on
@@ -583,7 +585,7 @@ class TLSRecordLayer:
 				blockLength = self._writeState.encContext.block_size
 				if self.extra_padding_bytes:
 					if self.extra_padding_bytes + blockLength > 0xff:
-						self.extra_padding_bytes = 0xff - blockLength 
+						self.extra_padding_bytes = 0xff - blockLength
 					assert self.extra_padding_bytes + blockLength <= 0xff
 					if self.extra_padding_bytes % blockLength != 0:
 						self.extra_padding_bytes -= (self.extra_padding_bytes % blockLength)
@@ -591,7 +593,7 @@ class TLSRecordLayer:
 					assert self.extra_padding_bytes % blockLength == 0
 				paddingLength = (blockLength + self.extra_padding_bytes) -(currentLength % blockLength)
 				assert paddingLength <= 0xff
-				
+
 				paddingBytes = createByteArraySequence([paddingLength] * \
 													   (paddingLength+1))
 				if self.fault == Fault.badPadding:
@@ -618,7 +620,7 @@ class TLSRecordLayer:
 			if self.collected_records:
 				self.collected_records +=s
 			else:
-				self.collected_records = s    
+				self.collected_records = s
 		else:
 			if self.collected_records:
 				s = self.collected_records + s
@@ -655,7 +657,7 @@ class TLSRecordLayer:
 				return
 			s = s[bytesSent:]
 			yield 1
-		
+
 
 
 	def _getMsg(self, expectedType, secondaryType=None, constructorType=None):
@@ -764,7 +766,7 @@ class TLSRecordLayer:
 					#Convert secondaryType to tuple, if it isn't already
 					if not isinstance(secondaryType, tuple):
 						secondaryType = (secondaryType,)
-	
+
 					#If it's a handshake message, check handshake header
 					if recordHeader.ssl2:
 						subType = p.get(1)
@@ -785,13 +787,13 @@ class TLSRecordLayer:
 									AlertDescription.unexpected_message,
 									"Expecting %s, got %s" % (str(secondaryType), subType)):
 								yield result
-	
+
 					#Update handshake hashes
 					sToHash = bytesToString(p.bytes)
 					self._handshake_md5.update(sToHash)
 					self._handshake_sha.update(sToHash)
 					self._handshake_sha256.update(sToHash)
-	
+
 					#Parse based on handshake type
 					if subType == HandshakeType.hello_request:
 						yield HelloRequest().parse(p)
@@ -822,7 +824,7 @@ class TLSRecordLayer:
 						raise AssertionError()
 
 				if recordHeader.type not in original_expectedType:
-					continue 
+					continue
 				break
 
 		#If an exception was raised by a Parser or Message instance:
@@ -1068,7 +1070,7 @@ class TLSRecordLayer:
 		self.allegedSharedKeyUsername = None
 		self.allegedSrpUsername = None
 		self._refCount = 1
-		
+
 	def _activateApplicationData(self,flag):
 		self._application_enabled = flag
 		if self._application_enabled and self._application_queue:
@@ -1195,14 +1197,14 @@ class TLSRecordLayer:
 		verifyData = self._calcFinished(True)
 		if self.fault == Fault.badFinished:
 			verifyData[0] = (verifyData[0]+1)%256
-			
+
 		self.our_verify_data = verifyData
 
 		#Send Finished message under new state
 		finished = Finished(self.version).create(verifyData)
 		for result in self._sendMsg(finished, collect_records=True):
 			yield result
-			
+
 		if self.do_false_start:
 			self._activateApplicationData(True)
 		for result in self._flush_collected():
@@ -1236,7 +1238,7 @@ class TLSRecordLayer:
 			for result in self._sendError(AlertDescription.decrypt_error,
 										 "Finished message is incorrect"):
 				yield result
-				
+
 		self.peer_verify_data = verifyData
 
 	def _calcFinished(self, send=True):
